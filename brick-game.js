@@ -42,13 +42,20 @@ function setup() {
     rectMode(CORNER);
     ellipseMode(RADIUS);
 
-    let w = windowHeight * RATIO;
+    let w = windowWidth;
     let h = windowHeight;
-    let max = Math.max(windowHeight, windowWidth);
-    if (max == windowHeight) {
+    if (w / h > RATIO) {
+        w = DIM_X * (windowHeight / DIM_Y);
+        h = windowHeight;
+    } else {
         w = windowWidth;
-        h = windowWidth / RATIO;
+        h = DIM_Y * (windowWidth / DIM_X);
     }
+    // let max = Math.max(windowHeight, windowWidth);
+    // if (max == windowHeight) {
+    //     w = windowWidth;
+    //     h = windowWidth / RATIO;
+    // }
     w = Math.floor(w - (w % DIM_X));
     h = Math.floor(h - (h % DIM_Y));
     cnv = createCanvas(w, h);
@@ -79,7 +86,6 @@ function setup() {
             let a = x * tileW;
             let b = y * brickness + tileH;
             bricks.push([a, b]);
-            console.log(a, b);
         }
     }
     
@@ -135,15 +141,15 @@ function draw() {
         //     score++;
         // }
 
-        if (ballX > x && ballX < x + tileW) {
-            if (ballY >= y && ballY < y + brickness + (ballH / 2)) {
+        if (ballX + ballVx >= x && ballX + ballVx <= x + tileW) {
+            if (ballY + ballVy >= y && ballY + ballVy <= y + brickness + (ballH / 2)) {
                 ballVy = -1 * ballVy;
                 bricks[i] = false;
                 score++;
             }
         }
-        if (ballX >= x - ballW / 2 && ballX <= x + tileW + ballH / 2) {
-            if (ballY >= y && ballY <= y + brickness) {
+        if (ballX + ballVx >= x - ballW / 2 && ballX + ballVx <= x + tileW + ballH / 2) {
+            if (ballY + ballVy >= y && ballY + ballVy <= y + brickness) {
                 ballVx = -1 * ballVx;
                 bricks[i] = false;
                 score++;
@@ -191,10 +197,13 @@ function draw() {
         drawBall(width - (tileW / 2) - i * (tileW * 2 / 3), tileH / 2);
     }
 
+
+    drawPauseSquare(width / 2, tileH / 2, pixel * 14);
     // Pause game
     if (paused === true) {
         drawPaused();
     }
+    
 
     // Finish game
     if (lives < 0) {
@@ -368,19 +377,14 @@ function rectIntersectRect(x1, y1, w1, h1, x2, y2, w2, h2) {
     let a = 1;
     let b = 1;
     
-    if (x1 + w1 >= x2) {
-        a = -1;
-    } else if (x1 <= x2 + w2) {
+    if (x1 + w1 >= x2 && x1 <= x2 + w2) {
         a = 1;
     }
 
-    if (y1 + h1 >= y2) {
+    if (y1 + h1 >= y2 && y1 <= y2 + h2) {
         b = -1;
-    } else if (y1 <= y2 + h2) {
-        b = 1;
     }
-
-    return [a, b];
+    return a - b != 0;
 }
 
 function drawPaused() {
@@ -388,28 +392,26 @@ function drawPaused() {
     noStroke();
     rect(0, 0, width, height);
 
-    let boxX = width / 2 - tileW * 1.5;
-    let boxY = height / 2 - tileH * 1.5;
-    fill(0);
-    rect(boxX, boxY, tileW * 3, tileH * 3);
+    drawPauseSquare(width / 2, height / 2, tileW * 3);
+}
 
-    let w = pixel * 2;
-    let barX = boxX + tileW - w;
-    let barY = boxY + tileH - w;
+function drawPauseSquare(x, y, w) {
+    let boxX = x - w / 2;
+    let boxY = y - w / 2;
+    fill(0);
+    rect(boxX, boxY, w, w);
+
+    let thick = w / 24;
+    let barX = boxX + w / 3;
+    let barY = boxY + w / 3 - thick;
     fill(255);
-    rect(barX, barY, w, tileH + 2 * w);
-    rect(barX + tileW + w, barY, w, tileH + 2 * w);
+    rect(barX, barY, thick, w / 3 + 2 * thick);
+    rect(barX + (w / 3) - thick, barY, thick, w / 3 + 2 * thick);
 }
 
 function keyTyped() {
     if (key == ' ') {
-        paused = !paused;
-    }
-
-    if (paused === true) {
-        noLoop();
-    } else if (!paused) {
-        loop();
+        pause();
     }
 }
 
@@ -442,8 +444,23 @@ function movePaddleForMouse() {
 
 function mousePressed() {
     movePaddleForMouse();
+    // Pause
+    if (!paused && rectIntersectRect(mouseX, mouseY, pixel, pixel, (width / 2) - (7 * pixel), (tileH / 2) - (pixel * 7), pixel * 14, pixel * 14)) {
+        pause();
+    } else if (paused === true) {
+        pause();
+    }
 }
 
 function mouseDragged() {
     movePaddleForMouse();
+}
+
+function pause() {
+    paused = !paused;
+    if (paused === true) {
+        noLoop();
+    } else if (!paused) {
+        loop();
+    }
 }
