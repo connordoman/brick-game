@@ -1,4 +1,4 @@
-const FPS = 30;
+const FPS = 60;
 const DIM_X = 9;
 const DIM_Y = 16;
 const RATIO = DIM_X / DIM_Y;
@@ -37,6 +37,13 @@ let lives;
 
 let paused;
 
+let gameFont;
+
+function preload() {
+    //gameFont = loadFont('https://fonts.gstatic.com/s/firacode/v9/uU9eCBsR6Z2vfE9aq3bL0fxyUs4tcw4W_GNsJV37MOzlojwUKaJO.woff');
+    gameFont = "Fira Code";
+}
+
 function setup() {
     frameRate(FPS);
     rectMode(CORNER);
@@ -51,18 +58,15 @@ function setup() {
         w = windowWidth;
         h = DIM_Y * (windowWidth / DIM_X);
     }
-    // let max = Math.max(windowHeight, windowWidth);
-    // if (max == windowHeight) {
-    //     w = windowWidth;
-    //     h = windowWidth / RATIO;
-    // }
     w = Math.floor(w - (w % DIM_X));
     h = Math.floor(h - (h % DIM_Y));
     cnv = createCanvas(w, h);
     cnv.parent('game');
-    tileW = Math.floor(width / DIM_X);
-    tileH = Math.floor(height / DIM_Y);
-    pixel = Math.floor((tileW / 16 + tileH / 16) / 2);
+
+    // Set units
+    tileW = width / DIM_X;
+    tileH = height / DIM_Y;
+    pixel = (tileW / 16 + tileH / 16) / 2;
 
     // Set up paddle
     paddleX = tileW * DIM_X / 2;
@@ -94,6 +98,7 @@ function setup() {
     score = 0;
     lives = 3;
     paused = false;
+    textFont(gameFont);
 
     // Controls
     cnv.touchStarted(movePaddleForTouch);
@@ -188,7 +193,7 @@ function draw() {
     noStroke();
     fill(255);
     textSize(pixel * 6);
-    text("Score: " + score, pixel * 4, pixel * 6, width - tileW, textSize())
+    text("Score: " + score, pixel * 4, pixel * 10);
     //let ang = frameRate().toFixed(2);
     //text(ang, width / 2 - tileW / 2 - textWidth(ang) / 2, tileH / 6, textWidth(ang), tileH);
 
@@ -421,20 +426,22 @@ function movePaddleForTouch() {
         x = touches[t].x;
         y = touches[t].y;
 
-        if (y > paddleY - tileH && y < paddleY + tileH) {
+        if (y > paddleY - tileH && y < paddleY + 2 * tileH) {
             if (x > paddleX - paddleW / 2 && x < paddleX + paddleW / 2) {
                 paddleX = x;
             }
         }
     }
     paddleCollide();
+    pauseForTouch();
+    return false;
 }
 
 function movePaddleForMouse() {
     let x = mouseX;
     let y = mouseY;
 
-    if (y > paddleY - tileH && y < paddleY + tileH) {
+    if (y > paddleY - tileH && y < paddleY + 2 * tileH) {
         if (x > paddleX - paddleW / 2 && x < paddleX + paddleW / 2) {
             paddleX = x;
         }
@@ -442,12 +449,25 @@ function movePaddleForMouse() {
     paddleCollide();
 }
 
+function pauseForTouch() {
+    let x, y;
+    for (let t = 0; t < touches.length; t++) {
+        x = touches[t].x;
+        y = touches[t].y;
+        if (!paused && rectIntersectRect(x, y, pixel, pixel, (width / 2) - (7 * pixel), (tileH / 2) - (pixel * 7), pixel * 14, pixel * 14)) {
+            pause();
+        } else if (paused === true && rectIntersectRect(x, y, pixel, pixel, 0, 0, width, height)) {
+            pause();
+        }
+    }
+}
+
 function mousePressed() {
     movePaddleForMouse();
     // Pause
     if (!paused && rectIntersectRect(mouseX, mouseY, pixel, pixel, (width / 2) - (7 * pixel), (tileH / 2) - (pixel * 7), pixel * 14, pixel * 14)) {
         pause();
-    } else if (paused === true) {
+    } else if (paused === true && rectIntersectRect(mouseX, mouseY, pixel, pixel, 0, 0, width, height)) {
         pause();
     }
 }
