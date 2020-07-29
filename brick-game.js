@@ -1,4 +1,11 @@
 const FPS = 30;
+const DIM_X = 9;
+const DIM_Y = 16;
+const RATIO = DIM_X / DIM_Y;
+
+const BRICK_ROWS = 9;
+
+const DEBUG = false;
 
 let cnv;
 let tileW;
@@ -21,6 +28,7 @@ let ballVy = 3;
 let brickness;
 let bricks = [];
 
+
 let bufferX;
 
 let score;
@@ -33,17 +41,27 @@ function setup() {
     frameRate(FPS);
     rectMode(CORNER);
     ellipseMode(RADIUS);
-    cnv = createCanvas(windowHeight * (9 / 16), windowHeight);
+
+    let w = windowHeight * RATIO;
+    let h = windowHeight;
+    let max = Math.max(windowHeight, windowWidth);
+    if (max == windowHeight) {
+        w = windowWidth;
+        h = windowWidth / RATIO;
+    }
+    w = Math.floor(w - (w % DIM_X));
+    h = Math.floor(h - (h % DIM_Y));
+    cnv = createCanvas(w, h);
     cnv.parent('game');
-    tileW = width / 9;
-    tileH = height / 16;
-    pixel = tileW / 16;
+    tileW = Math.floor(width / DIM_X);
+    tileH = Math.floor(height / DIM_Y);
+    pixel = Math.floor((tileW / 16 + tileH / 16) / 2);
 
     // Set up paddle
-    paddleX = width / 2;
+    paddleX = tileW * DIM_X / 2;
     paddleY = height - tileH;
     paddleW = tileW * 2;
-    paddleH = tileH / 3;
+    paddleH = pixel * 4
     paddleVx = 8 * tileW / FPS;
 
     // Set up ball
@@ -55,9 +73,9 @@ function setup() {
     ballVy = 5 * tileH / FPS;
 
     // Set up bricks
-    brickness = tileH / 3;
-    for (let y = 0; y < 18; y++) {
-        for (let x = 0; x < width / tileW; x++) {
+    brickness = pixel * 6;
+    for (let y = 0; y < BRICK_ROWS; y++) {
+        for (let x = 0; x < DIM_X; x++) {
             let a = x * tileW;
             let b = y * brickness + tileH;
             bricks.push([a, b]);
@@ -70,6 +88,10 @@ function setup() {
     score = 0;
     lives = 3;
     paused = false;
+
+    // Controls
+    cnv.touchStarted(movePaddleForTouch);
+    cnv.touchMoved(movePaddleForTouch);
 }
 
 function draw() {
@@ -137,7 +159,7 @@ function draw() {
     drawPaddle(paddleX, paddleY);
     drawBall(ballX, ballY);
     stroke(255);
-    strokeWeight(pixel);
+    strokeWeight(pixel / 2);
     for (let i = 0; i < bricks.length; i++) {
         if (bricks[i] !== false) {
             drawBrick(bricks[i][0], bricks[i][1]);
@@ -145,13 +167,15 @@ function draw() {
     }
     
     // Debug
-    drawIndicators();
+    if (DEBUG === true) {
+        drawIndicators();
+    }
 
     // Draw score
     noStroke();
     fill(255);
-    textSize(tileH * 2 / 4);
-    text("Score: " + score, tileW / 2, tileH / 5, width - tileW, tileH)
+    textSize(pixel * 6);
+    text("score: " + score, tileW / 2, pixel * 4, width - tileW, tileH)
     //let ang = frameRate().toFixed(2);
     //text(ang, width / 2 - tileW / 2 - textWidth(ang) / 2, tileH / 6, textWidth(ang), tileH);
 
@@ -198,7 +222,7 @@ function drawIndicators() {
     let useLine = true;
     if (useLine === true) {
         strokeWeight(pixel);
-        vec = calculateBallVector(ballX, ballY, ballVx, ballVy, Math.sqrt(ballVx * ballVx + ballVy * ballVy) * 10);
+        vec = calculateBallVector(ballX, ballY, ballVx, ballVy, Math.sqrt(ballVx * ballVx + ballVy * ballVy) * tileH / 8);
         line(ballX, ballY, vec[0], vec[1]);
     } else {
         strokeWeight(4 * pixel);
@@ -282,8 +306,6 @@ function ballCollideWithPaddle() {
 }
 
 function drawBrick(x, y) {
-    x = x - (x % tileW);
-    y = y - (y % brickness);
     stroke(255);
     fill(color(128, 255 * (x / width), 255 * (y / (6 * tileH))));
     rect(x, y, tileW, brickness);
@@ -354,6 +376,8 @@ function drawPaused() {
     noStroke();
     rect(0, 0, width, height);
 
+    fill(0);
+    
 }
 
 function keyTyped() {
@@ -365,5 +389,19 @@ function keyTyped() {
         noLoop();
     } else if (!paused) {
         loop();
+    }
+}
+
+function movePaddleForTouch() {
+    let x, y;
+    for (let t = 0; t < touches.length; t++) {
+        x = touches[t].x;
+        y = touches[t].y;
+
+        if (y > paddleY - tileH && y < paddleY + tileH) {
+            if (x > paddleX - paddleW / 2 && x < paddleX + paddleW / 2) {
+                paddleX = x;
+            }
+        }
     }
 }
