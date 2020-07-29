@@ -175,13 +175,18 @@ function draw() {
     noStroke();
     fill(255);
     textSize(pixel * 6);
-    text("score: " + score, tileW / 2, pixel * 4, width - tileW, tileH)
+    text("Score: " + score, pixel * 4, pixel * 6, width - tileW, textSize())
     //let ang = frameRate().toFixed(2);
     //text(ang, width / 2 - tileW / 2 - textWidth(ang) / 2, tileH / 6, textWidth(ang), tileH);
 
     // Draw lives
     for (let i = 0; i < lives; i++) {
         drawBall(width - (tileW / 2) - i * (tileW * 2 / 3), tileH / 2);
+    }
+
+    // Pause game
+    if (paused === true) {
+        drawPaused();
     }
 
     // Finish game
@@ -249,10 +254,10 @@ function calculateBallVector(x, y, vx, vy, r) {
 
 function paddleCollide() {
     if (paddleX < paddleW / 2) {
-        paddleVx += paddleVx + 1;
+        paddleX = paddleW / 2;
     }
     if (paddleX > width - (paddleW / 2)) {
-        paddleVx -= paddleVx + 1;
+        paddleX = width - (paddleW / 2);
     }
     
 }
@@ -376,8 +381,17 @@ function drawPaused() {
     noStroke();
     rect(0, 0, width, height);
 
+    let boxX = width / 2 - tileW * 1.5;
+    let boxY = height / 2 - tileH * 1.5;
     fill(0);
-    
+    rect(boxX, boxY, tileW * 3, tileH * 3);
+
+    let w = pixel * 2;
+    let barX = boxX + tileW - w;
+    let barY = boxY + tileH - w;
+    fill(255);
+    rect(barX, barY, w, tileH + 2 * w);
+    rect(barX + tileW + w, barY, w, tileH + 2 * w);
 }
 
 function keyTyped() {
@@ -404,4 +418,25 @@ function movePaddleForTouch() {
             }
         }
     }
+    paddleCollide();
+}
+
+function movePaddleForMouse() {
+    let x = mouseX;
+    let y = mouseY;
+
+    if (y > paddleY - tileH && y < paddleY + tileH) {
+        if (x > paddleX - paddleW / 2 && x < paddleX + paddleW / 2) {
+            paddleX = x;
+        }
+    }
+    paddleCollide();
+}
+
+function mousePressed() {
+    movePaddleForMouse();
+}
+
+function mouseDragged() {
+    movePaddleForMouse();
 }
