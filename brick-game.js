@@ -156,6 +156,11 @@ function draw() {
     ballCollide();
     ballCollideWithPaddle();
 
+    // Draw top line
+    stroke(255);
+    strokeWeight(pixel / 2);
+    line(0, tileH, width, tileH);
+
     drawPaddle(paddleX, paddleY);
     drawBall(ballX, ballY);
     stroke(255);
@@ -170,6 +175,8 @@ function draw() {
     if (DEBUG === true) {
         drawIndicators();
     }
+
+
 
     // Draw score
     noStroke();
