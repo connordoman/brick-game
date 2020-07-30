@@ -1,11 +1,11 @@
-const FPS = 60;
+const FPS = 30;
 const DIM_X = 9;
 const DIM_Y = 16;
 const RATIO = DIM_X / DIM_Y;
 
 const BRICK_ROWS = 9;
 
-const DEBUG = false;
+const DEBUG = true;
 
 let cnv;
 let tileW;
@@ -23,7 +23,7 @@ let ballY;
 let ballW;
 let ballH;
 let ballVx = 0;
-let ballVy = 3;
+let ballVy = Math.PI;
 
 let brickness;
 let bricks = [];
@@ -32,12 +32,15 @@ let bricks = [];
 let bufferX;
 
 let score;
-
 let lives;
-
 let paused;
 
 let gameFont;
+
+let qt;
+
+
+let objectPaddle;
 
 function preload() {
     //gameFont = loadFont('https://fonts.gstatic.com/s/firacode/v9/uU9eCBsR6Z2vfE9aq3bL0fxyUs4tcw4W_GNsJV37MOzlojwUKaJO.woff');
@@ -46,8 +49,8 @@ function preload() {
 
 function setup() {
     frameRate(FPS);
-    rectMode(CORNER);
     ellipseMode(RADIUS);
+    rectMode(CENTER);
 
     let w = windowWidth;
     let h = windowHeight;
@@ -74,6 +77,8 @@ function setup() {
     paddleW = tileW * 2;
     paddleH = pixel * 4
     paddleVx = 8 * tileW / FPS;
+    objectPaddle = new Paddle(tileW * DIM_X / 2, tileH * DIM_Y - tileH, tileW * 2, pixel * 4, 8 * tileW / FPS);
+    objectPaddle.color = "white";
 
     // Set up ball
     ballX = paddleX;
@@ -87,8 +92,8 @@ function setup() {
     brickness = pixel * 6;
     for (let y = 0; y < BRICK_ROWS; y++) {
         for (let x = 0; x < DIM_X; x++) {
-            let a = x * tileW;
-            let b = y * brickness + tileH;
+            let a = x * tileW + tileW / 2;
+            let b = y * brickness + tileH * 1.25;
             bricks.push([a, b]);
         }
     }
@@ -103,48 +108,82 @@ function setup() {
     // Controls
     cnv.touchStarted(movePaddleForTouch);
     cnv.touchMoved(movePaddleForTouch);
+
+    // Optimizations
+    buildQuadtree();
 }
 
 function draw() {
     background(0);
 
+    // Build quadtree
+    buildQuadtree();
 
     // Update paddle
     //paddleX += paddleVx;
     if (keyIsDown(LEFT_ARROW) && paddleX >= (paddleW / 2) + paddleVx) {
         paddleX -= paddleVx;
+        objectPaddle.moveLeft();
     } else if (keyIsDown(RIGHT_ARROW) && paddleX <= width - (paddleW / 2) - paddleVx) {
         paddleX += paddleVx;
+        objectPaddle.moveRight();
     } 
 
 
     // Update ball
     ballX += ballVx;
     ballY += ballVy;
+    
+    // Check range
+    let range = new Rectangle(ballX, ballY, ballW * 3 / 2, ballH * 3 / 2);
+    let points = qt.query(range);
+    if (DEBUG) {
+        noFill();
+        strokeWeight(pixel / 2);
+        stroke(color(255, 32, 32));
+        rect(range.x, range.y, range.w, range.h);
+    }
 
+    for (let p of points) {
+        for (let brick of bricks) {
+
+            if (brick) {
+                let x = brick[0];
+                let y = brick[1];
+                if (p.x !== x || p.y !== y) {
+                    continue;
+                }
+
+                if (ballX + ballVx >= p.x && ballX + ballVx <= p.x + tileW) {
+                    if (ballY + ballVy >= p.y && ballY + ballVy <= p.y + brickness + (ballH / 2)) {
+                        ballVy = -1 * ballVy;
+                        bricks[bricks.indexOf(brick)] = false;
+                        score++;
+                    }
+                }
+                if (ballX + ballVx >= p.x - ballW / 2 && ballX + ballVx <= p.x + tileW + ballH / 2) {
+                    if (ballY + ballVy >= p.y && ballY + ballVy <= p.y + brickness) {
+                        ballVx = -1 * ballVx;
+                        bricks[bricks.indexOf(brick)] = false;
+                        score++;
+                    }
+                }
+            }
+        }
+        
+    }
+    
+    /**
     // Update bricks
     for (let i = 0; i < bricks.length; i++) {
         if (bricks[i] === false) {
             continue;
         }
-        let x = bricks[i][0];
-        let y = bricks[i][1];
-
-        // let collide = rectIntersectRect(ballX - ballH / 2, ballY - ballY / 2, ballW, ballH, x, y, tileW, tileH);
-        // if (collide) {
-        //     ballVx = collide[0] * Math.abs(ballVx);
-        //     ballVy = collide[1] * Math.abs(ballVy);
-        // }
-
-        // let collide = circleIntersectRect(ballX, ballY, ballW / 2, x, y, tileH, brickness);
-        // if (collide !== false) {
-        //     let collX, collY;
-
-        //     ballVx = collide[1] * Math.abs(ballVx);
-        //     ballVy = collide[0] * Math.abs(ballVy);
-        //     bricks[i] = false;
-        //     score++;
-        // }
+        let range = new Rectangle(ballX, y, tileW, brickness);
+        let points = qt.query(range);
+        for (let p of points) {
+            strokeWeight
+        }
 
         if (ballX + ballVx >= x && ballX + ballVx <= x + tileW) {
             if (ballY + ballVy >= y && ballY + ballVy <= y + brickness + (ballH / 2)) {
@@ -161,6 +200,7 @@ function draw() {
             }
         }
     }
+    */
 
     // Check collisions
     //paddleCollide();
@@ -172,22 +212,13 @@ function draw() {
     strokeWeight(pixel / 2);
     line(0, tileH, width, tileH);
 
-    drawPaddle(paddleX, paddleY);
+    objectPaddle.draw();
     drawBall(ballX, ballY);
     stroke(255);
     strokeWeight(pixel / 2);
-    for (let i = 0; i < bricks.length; i++) {
-        if (bricks[i] !== false) {
-            drawBrick(bricks[i][0], bricks[i][1]);
-        }
-    }
-    
-    // Debug
-    if (DEBUG === true) {
-        drawIndicators();
-    }
 
-
+    // Draw bricks
+    drawBrickArray(0, 0, bricks);
 
     // Draw score
     noStroke();
@@ -202,24 +233,28 @@ function draw() {
         drawBall(width - (tileW / 2) - i * (tileW * 2 / 3), tileH / 2);
     }
 
-
     drawPauseSquare(width / 2, tileH / 2, pixel * 14);
     // Pause game
     if (paused === true) {
         drawPaused();
     }
-    
 
     // Finish game
     if (lives < 0) {
-        gameOver();
+        drawGameOver();
+        noLoop();
+    }
+  
+    // Debug
+    if (DEBUG === true) {
+        drawIndicators();
     }
 }
 
 function drawPaddle(x, y) {
     noStroke();
     fill(255);
-    rect(x - (paddleW / 2), y - paddleH, paddleW, paddleH, paddleH);
+    rect(x, y - paddleH / 2, paddleW, paddleH, paddleH);
 }
 
 function drawBall(x, y) {
@@ -230,11 +265,17 @@ function drawBall(x, y) {
 
 
 function drawIndicators() {
+
+    // Paddle Indicator
     strokeWeight(4);
     stroke(color(0, 255, 0));
     point(paddleX, paddleY);
+
+    // Ball indicator
     stroke(color(0, 255, 255));
     point(ballX, ballY);
+
+    // Boundary lines
     strokeWeight(pixel);
     stroke(255);
     line(0, tileH, width, tileH);
@@ -248,7 +289,7 @@ function drawIndicators() {
     let useLine = true;
     if (useLine === true) {
         strokeWeight(pixel);
-        vec = calculateBallVector(ballX, ballY, ballVx, ballVy, Math.sqrt(ballVx * ballVx + ballVy * ballVy) * tileH / 8);
+        vec = calculateBallVector(ballX, ballY, ballVx, ballVy, ballW + Math.sqrt(ballVx * ballVx + ballVy * ballVy));
         line(ballX, ballY, vec[0], vec[1]);
     } else {
         strokeWeight(4 * pixel);
@@ -257,10 +298,14 @@ function drawIndicators() {
     }
     fill(255);
     noStroke();
+    textSize(pixel * 8);
     let debugString = "v: (" + ballVx.toFixed(1) + ", " + ballVy.toFixed(1) + ")";
     debugString += "\npt: (" + vec[0].toFixed(1) + ", " + vec[1].toFixed(1) + ")";
     debugString += "\ntheta: " + vec[2].toFixed(3);
     text(debugString, tileW / 5, height - tileH * 2);
+
+    // Quadtree
+    quadTreeMask(qt);
 }
 
 function calculateBallVector(x, y, vx, vy, r) {
@@ -302,24 +347,23 @@ function ballCollide() {
     }
 }
 
-function gameOver() {
-    fill(color(128, 128));
-    rect(0, 0, width, height);
+function drawGameOver() {
+    fill(color(200, 128));
+    rect(width / 2, width / 2, width, height);
     textSize(tileW);
 
     let over = "Game Over";
-    let textX = width / 2 - textWidth(over) / 2;
+    let textX = width / 2;
     let textY = height / 2;
     fill(0);
-    rect(textX - tileW / 2, textY - tileH * 4 / 3, textWidth(over) + tileW, textSize() + tileH);
+    rect(textX, textY, textWidth(over) + tileW, tileH * 2);
     
     fill(color(255, 64, 64));
-    text(over, textX, textY);
-    noLoop();
+    text(over, textX - textWidth(over) / 2, textY + tileH / 3);
 }
 
 function ballCollideWithPaddle() {
-    let diffX = -1 * (paddleX - ballX)
+    let diffX = -1 * (paddleX - ballX);
     let halfPaddle = paddleW / 2;
     let halfBallW = ballW / 2;
     let halfBallH = ballH / 2;
@@ -335,6 +379,14 @@ function drawBrick(x, y) {
     stroke(255);
     fill(color(128, 255 * (x / width), 255 * (y / (6 * tileH))));
     rect(x, y, tileW, brickness);
+}
+
+function drawBrickArray(x, y, brickArray) {
+    for (let i = 0; i < brickArray.length; i++) {
+        if (brickArray[i] !== false) {
+            drawBrick(x + brickArray[i][0], y + bricks[i][1]);
+        }
+    }
 }
 
 function circleIntersectRect(x1, y1, r, x2, y2, w, h) {
@@ -395,23 +447,19 @@ function rectIntersectRect(x1, y1, w1, h1, x2, y2, w2, h2) {
 function drawPaused() {
     fill(200, 128);
     noStroke();
-    rect(0, 0, width, height);
+    rect(width / 2, height / 2, width, height);
 
     drawPauseSquare(width / 2, height / 2, tileW * 3);
 }
 
 function drawPauseSquare(x, y, w) {
-    let boxX = x - w / 2;
-    let boxY = y - w / 2;
     fill(0);
-    rect(boxX, boxY, w, w);
+    rect(x, y, w, w);
 
     let thick = w / 24;
-    let barX = boxX + w / 3;
-    let barY = boxY + w / 3 - thick;
     fill(255);
-    rect(barX, barY, thick, w / 3 + 2 * thick);
-    rect(barX + (w / 3) - thick, barY, thick, w / 3 + 2 * thick);
+    rect(x - w / 6 + thick, y, thick, w / 3 + 2 * thick);
+    rect(x + (w / 6) - thick, y, thick, w / 3 + 2 * thick);
 }
 
 function keyTyped() {
@@ -483,4 +531,50 @@ function pause() {
     } else if (!paused) {
         loop();
     }
+}
+
+function calculateIndex(x, y, w) {
+    return (y * w) + x;
+}
+
+function quadTreeMask(qt) {
+    noStroke();
+    fill(200, 128);
+    rect(width / 2, height / 2, width, height);
+    
+    quadTreeFraction(qt);
+}
+
+function quadTreeFraction(qt) {
+    stroke(color(32, 255, 32));
+    strokeWeight(1);
+    noFill();
+    rect(qt.boundary.x, qt.boundary.y, qt.boundary.w * 2, qt.boundary.h * 2);
+    
+    strokeWeight(2 * pixel);
+    for (let p of qt.points) {
+        point(p.x, p.y);
+    }
+    if (qt.divided) {
+        quadTreeFraction(qt.quadrantOne);
+        quadTreeFraction(qt.quadrantTwo);
+        quadTreeFraction(qt.quadrantThree);
+        quadTreeFraction(qt.quadrantFour);  
+    }
+}
+
+function buildQuadtree() {
+    // Optimization
+    let boundary = new Rectangle(width / 2, height / 2, width, height);
+    qt = new Quadtree(boundary, 1);
+
+    for (let i = 0; i < bricks.length; i++) {
+        let x = bricks[i][0];
+        let y = bricks[i][1];
+        let p = new Point(x, y);
+        qt.insert(p);
+        
+    }
+    //qt.insert(new Point(ballX, ballY));
+    //qt.insert(new Point(paddleX, paddleY));
 }
