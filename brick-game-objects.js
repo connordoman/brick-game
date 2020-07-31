@@ -100,7 +100,7 @@ class BrickGroup {
                 this.bricks.push(b);
             }
         }
-        console.log(this.bricks.length);
+        //this.bricks.length);
     }
 
     getBrick(x, y) {
@@ -129,7 +129,7 @@ class BrickGroup {
 
     disableBrick(x, y) {
         if (this.getBrick(x, y)) {
-            console.log("Disabling brick...");
+            //console.log("Disabling brick...");
             this.bricks[(this.w * y) + x] = false;
         }
     }

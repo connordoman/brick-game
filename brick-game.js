@@ -4,14 +4,14 @@
  * July 27, 2020
  * 
  */
-const FPS = 30;
+const FPS = 60;
 const DIM_X = 9;
 const DIM_Y = 16;
 const RATIO = DIM_X / DIM_Y;
 
-const BRICK_ROWS = 9;
+const BRICK_ROWS = 6;
 
-const DEBUG = true;
+const DEBUG = false;
 
 let cnv;
 let tileW;
@@ -99,18 +99,6 @@ function setup() {
 
     // Set up bricks
     brickness = pixel * 6;
-    objectBricks = [];
-    /*for (let y = 0; y < BRICK_ROWS; y++) {
-        for (let x = 0; x < DIM_X; x++) {
-            let a = x * tileW + tileW / 2;
-            let b = y * brickness + tileH * 1.25;
-            bricks.push([a, b]);
-
-            // Object version
-            let br = new Brick(x, y, w, h);
-            br.setColor(colorAt(x * tileW, y * brickness, width, height));
-        }
-    }*/
     brickGroup = new BrickGroup(tileW / 2, tileH + brickness / 2, DIM_X, BRICK_ROWS, new Point(tileW, brickness));
 
     // Misc
@@ -150,7 +138,7 @@ function draw() {
     ballY += ballVy;
     
     // Check brick collisions
-    let range = new Rectangle(ballX, ballY, ballW * 3 / 2, ballH * 3 / 2);
+    let range = new Rectangle(ballX, ballY, ballW, ballH);
     let points = qt.query(range);
     if (DEBUG) {
         noFill();
@@ -189,8 +177,8 @@ function draw() {
                     if (ballY + ballVy + (ballH / 2) >= y - brickness / 2 && ballY + ballVy - (ballH / 2) < y + brickness / 2) {
                         ballVy = -1 * ballVy;
                         brickGroup.disableBrick(xIndex, yIndex);
-                        score += calculateScore(2 * (Math.log(BRICK_ROWS - yIndex) + Math.E));
-                        console.log(`Collision: ${br.pxPoint}`);
+                        score += calculateScore(yIndex);
+                        //console.log(`Collision: ${br.pxPoint}`);
                     }
                 }
             }
@@ -545,13 +533,14 @@ function calculateIndex(x, y, w) {
 }
 
 function calculateScore(y) {
+    y = BRICK_ROWS - y;
     return Math.ceil((y * y) / BRICK_ROWS) + 1;
 }
 
 function quadTreeMask(qt) {
-    noStroke();
-    fill(200, 128);
-    rect(width / 2, height / 2, width, height);
+    //noStroke();
+    //fill(200, 128);
+    //rect(width / 2, height / 2, width, height);
     
     quadTreeFraction(qt);
 }
