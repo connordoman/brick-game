@@ -51,6 +51,8 @@ let debugText;
 
 let objectPaddle;
 
+let objectBall;
+
 function preload() {
     //gameFont = loadFont('https://fonts.gstatic.com/s/firacode/v9/uU9eCBsR6Z2vfE9aq3bL0fxyUs4tcw4W_GNsJV37MOzlojwUKaJO.woff');
     gameFont = "Fira Code";
@@ -91,11 +93,13 @@ function setup() {
 
     // Set up ball
     ballX = paddleX;
-    ballY = height / 2 ;
+    ballY = height / 2;
     ballW = tileW / 2;
     ballH = tileH / 2;
     ballVx = 0;
     ballVy = 5 * tileH / FPS;
+    objectBall = new Ball(ballX, ballY, ballW);
+    objectBall.setVelocity(ballVx, ballVy);
 
     // Set up bricks
     brickness = pixel * 6;
@@ -130,15 +134,17 @@ function draw() {
     } else if (keyIsDown(RIGHT_ARROW) && paddleX <= width - (paddleW / 2) - paddleVx) {
         paddleX += paddleVx;
         objectPaddle.moveRight();
-    } 
+    }
+    objectPaddle.update();
 
 
     // Update ball
-    ballX += ballVx;
-    ballY += ballVy;
-    
+    //ballX += ballVx;
+    //ballY += ballVy;
+    objectBall.update();
+
     // Check brick collisions
-    let range = new Rectangle(ballX, ballY, ballW, ballH);
+    let range = new Rectangle(objectBall.x, objectBall.y, tileW * (2), tileH * (2));
     let points = qt.query(range);
     if (DEBUG) {
         noFill();
@@ -150,15 +156,15 @@ function draw() {
     if (points) {
 
         let minDist = tileW * 3;
-        let minPoint = new Point(ballX, ballY);
+        let minPoint = new Point(objectBall.x, objectBall.y);
 
         for (let p of points) {
-                printDebugLine("p: " + p);
-                let newDist = distanceTo(ballX, ballY, p.x, p.y);
-                if (newDist <= minDist) {
-                    minDist = newDist;
-                    minPoint = p;
-                }
+            printDebugLine("p: " + p);
+            let newDist = distanceTo(objectBall.x, objectBall.y, p.x, p.y);
+            if (newDist <= minDist) {
+                minDist = newDist;
+                minPoint = p;
+            }
         }
 
         if (minPoint) {
@@ -168,27 +174,30 @@ function draw() {
             if (br) {
                 //console.log(`closest: (${xIndex}, ${yIndex})\nbrick: ${br}`);
                 printDebugLine(`closest: (${xIndex}, ${yIndex})`);
-                let x = br.pxPoint.x;
-                let y = br.pxPoint.y;
 
-                
 
-                if (ballX + ballVx + (ballW / 2) >= x - tileW / 2 && ballX + ballVx - (ballW / 2) < x + tileW / 2) {
+                if (objectBall.collides(br)) {
+                    brickGroup.disableBrick(br.xIndex, br.yIndex);
+                    score += calculateScore(br.yIndex);
+                }
+
+                /*if (ballX + ballVx + (ballW / 2) >= x - tileW / 2 && ballX + ballVx - (ballW / 2) < x + tileW / 2) {
                     if (ballY + ballVy + (ballH / 2) >= y - brickness / 2 && ballY + ballVy - (ballH / 2) < y + brickness / 2) {
                         ballVy = -1 * ballVy;
                         brickGroup.disableBrick(xIndex, yIndex);
                         score += calculateScore(yIndex);
                         //console.log(`Collision: ${br.pxPoint}`);
                     }
-                }
+                }*/
             }
         }
     }
 
     // Check collisions
     //paddleCollide();
-    ballCollide();
-    ballCollideWithPaddle();
+    ///ballCollideWithWalls();
+    //ballCollideWithPaddle();
+    objectBall.collidesWithPaddle(objectPaddle);
 
     // Draw top line
     stroke(255);
@@ -196,11 +205,13 @@ function draw() {
     line(0, tileH, width, tileH);
 
     objectPaddle.draw();
-    drawBall(ballX, ballY);
-    stroke(255);
-    strokeWeight(pixel / 2);
+
+    //drawBall(ballX, ballY);
+    objectBall.draw();
 
     // Draw bricks
+    stroke(255);
+    strokeWeight(pixel / 2);
     //drawBrickArray(0, 0, bricks);
     brickGroup.draw();
 
@@ -228,7 +239,7 @@ function draw() {
         drawGameOver();
         noLoop();
     }
-  
+
     // Debug
     if (DEBUG === true) {
         drawIndicators();
@@ -258,33 +269,33 @@ function drawIndicators() {
 
     // Ball indicator
     stroke(color(0, 255, 255));
-    point(ballX, ballY);
+    point(objectBall.x, objectBall.y);
 
     // Boundary lines
     strokeWeight(pixel);
     stroke(255);
     line(0, tileH, width, tileH);
-    line(bufferX, 0, bufferX, height);
-    line(width - bufferX, 0, width - bufferX, height);
+    //line(bufferX, 0, bufferX, height);
+    //line(width - bufferX, 0, width - bufferX, height);
 
 
     // Ball vector
     stroke(255);
     let vec;
-    let useLine = true;
+    let useLine = false;
     if (useLine === true) {
         strokeWeight(pixel);
-        vec = calculateBallVector(ballX, ballY, ballVx, ballVy, ballW + Math.sqrt(ballVx * ballVx + ballVy * ballVy));
-        line(ballX, ballY, vec[0], vec[1]);
+        vec = calculateBallVector(objectBall.x, objectBall.y, objectBall.vX, objectBall.vY, objectBall.size);
+        line(objectBall.x, objectBall.y, vec[0], vec[1]);
     } else {
         strokeWeight(4 * pixel);
-        vec = calculateBallVector(ballX, ballY, ballVx, ballVy, ballW / 2);
+        vec = calculateBallVector(objectBall.x, objectBall.y, objectBall.vX, objectBall.vY, objectBall.r);
         point(vec[0], vec[1]);
     }
     fill(255);
     noStroke();
     textSize(pixel * 8);
-    printDebugLine("v: (" + ballVx.toFixed(1) + ", " + ballVy.toFixed(1) + ")");
+    printDebugLine("v: (" + objectBall.vX.toFixed(1) + ", " + objectBall.vY.toFixed(1) + ")");
     printDebugLine("pt: (" + vec[0].toFixed(1) + ", " + vec[1].toFixed(1) + ")");
     printDebugLine("theta: " + vec[2].toFixed(3));
     text(debugText, tileW / 5, BRICK_ROWS * brickness + tileH + textSize());
@@ -310,26 +321,6 @@ function paddleCollide() {
     if (paddleX > width - (paddleW / 2)) {
         paddleX = width - (paddleW / 2);
     }
-    
-}
-
-function ballCollide() {
-    if (ballX <= (ballW / 2)) {
-        ballVx = Math.abs(ballVx);
-    }
-    if (ballX >= width - (ballW / 2)) {
-        ballVx = -1 * Math.abs(ballVx);
-    }
-    if (ballY <= (ballH / 2) + tileH) {
-        ballVy = Math.abs(ballVy);
-    }
-    if (ballY >= height + (ballH / 2) - (tileH / 3)) {
-        ballVx = 0;
-        ballVy = Math.abs(ballVy);
-        ballX = width / 2;
-        ballY = height * 2 / 3;
-        lives--;
-    }
 }
 
 function printDebugLine(line) {
@@ -350,22 +341,9 @@ function drawGameOver() {
     let textY = height / 2;
     fill(0);
     rect(textX, textY, textWidth(over) + tileW, tileH * 2);
-    
+
     fill(color(255, 64, 64));
     text(over, textX - textWidth(over) / 2, textY + tileH / 3);
-}
-
-function ballCollideWithPaddle() {
-    let diffX = -1 * (paddleX - ballX);
-    let halfPaddle = paddleW / 2;
-    let halfBallW = ballW / 2;
-    let halfBallH = ballH / 2;
-    if (ballY + halfBallH + ballVy >= paddleY - paddleH && ballY - halfBallH + ballVy <= paddleY - paddleH / 2) {
-        if (ballX + halfBallW + ballVx >= paddleX - halfPaddle && ballX - halfBallW + ballVx <= paddleX + halfPaddle) {
-            ballVy = -1 * Math.abs(ballVy);
-            ballVx = (5 * tileW * (diffX / halfPaddle)) / FPS;
-        }
-    }
 }
 
 function drawBrick(x, y) {
@@ -426,7 +404,7 @@ function calculateAngle(vX, vY) {
 function rectIntersectRect(x1, y1, w1, h1, x2, y2, w2, h2) {
     let a = 1;
     let b = 1;
-    
+
     if (x1 + w1 >= x2 && x1 <= x2 + w2) {
         a = 1;
     }
@@ -483,11 +461,8 @@ function movePaddleForMouse() {
     let x = mouseX;
     let y = mouseY;
 
-    if (y > paddleY - tileH && y < paddleY + 2 * tileH) {
-        if (x > paddleX - paddleW / 2 && x < paddleX + paddleW / 2) {
-            paddleX = x;
-            objectPaddle.x = x;
-        }
+    if (y > objectPaddle.y - tileH && y < objectPaddle.y + 2 * tileH) {
+        objectPaddle.x = x;
     }
     paddleCollide();
 }
@@ -541,7 +516,7 @@ function quadTreeMask(qt) {
     //noStroke();
     //fill(200, 128);
     //rect(width / 2, height / 2, width, height);
-    
+
     quadTreeFraction(qt);
 }
 
@@ -550,7 +525,7 @@ function quadTreeFraction(qt) {
     strokeWeight(1);
     noFill();
     rect(qt.boundary.x, qt.boundary.y, qt.boundary.w * 2, qt.boundary.h * 2);
-    
+
     strokeWeight(2 * pixel);
     for (let p of qt.points) {
         point(p.x, p.y);
@@ -559,7 +534,7 @@ function quadTreeFraction(qt) {
         quadTreeFraction(qt.quadrantOne);
         quadTreeFraction(qt.quadrantTwo);
         quadTreeFraction(qt.quadrantThree);
-        quadTreeFraction(qt.quadrantFour);  
+        quadTreeFraction(qt.quadrantFour);
     }
 }
 
@@ -567,19 +542,10 @@ function buildQuadtree() {
     // Optimization
     let boundary = new Rectangle(width / 2, height / 2, width, height);
     qt = new Quadtree(boundary, 1);
-    
+
     brickGroup.forEach((brick) => {
-        qt.insert(brick.pxPoint);
+        qt.insert(brick.point);
     });
-    // for (let i = 0; i < bricks.length; i++) {
-    //     let x = bricks[i][0];
-    //     let y = bricks[i][1];
-    //     let p = new Point(x, y);
-    //     qt.insert(p);
-        
-    // }
-    //qt.insert(new Point(ballX, ballY));
-    //qt.insert(new Point(paddleX, paddleY));
 }
 
 function distanceTo(x1, y1, x2, y2) {
