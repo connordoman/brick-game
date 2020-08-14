@@ -29,7 +29,7 @@ let ballY;
 let ballW;
 let ballH;
 let ballVx = 0;
-let ballVy = Math.random(2, Math.PI);
+let ballVy = Math.random(Math.PI, 4);
 
 let brickness;
 let bricks = [];
@@ -105,7 +105,8 @@ function setup() {
     // Set up bricks
     brickness = pixel * 6;
     brickGroup = new BrickGroup(tileW / 2, tileH + brickness / 2, DIM_X, brickRows, new Point(tileW, brickness));
-    brickGroup.numDisabled = brickGroup.bricks.length - 1;
+    // for debugging
+    //brickGroup.numDisabled = brickGroup.bricks.length - 1;
 
     // Misc
     bufferX = tileW / 6;
@@ -116,8 +117,8 @@ function setup() {
     textFont(gameFont);
 
     // Controls
-    cnv.touchStarted(movePaddleForTouch);
-    cnv.touchMoved(movePaddleForTouch);
+    //cnv.touchStarted(movePaddleForTouch);
+    //cnv.touchMoved(movePaddleForTouch);
 
     // Optimizations
     buildQuadtree();
@@ -440,66 +441,8 @@ function drawPauseSquare(x, y, w) {
     rect(x + (w / 6) - thick, y, thick, w / 3 + 2 * thick);
 }
 
-function keyTyped() {
-    if (key == ' ') {
-        pause();
-    }
-}
 
-function movePaddleForTouch() {
-    let x, y;
-    for (let t = 0; t < touches.length; t++) {
-        x = touches[t].x;
-        y = touches[t].y;
-
-        if (y > paddleY - tileH && y < paddleY + 2 * tileH) {
-            if (x > paddleX - paddleW / 2 && x < paddleX + paddleW / 2) {
-                paddleX = x;
-                objectPaddle.x = x;
-            }
-        }
-    }
-    paddleCollide();
-    pauseForTouch();
-    return false;
-}
-
-function movePaddleForMouse() {
-    let x = mouseX;
-    let y = mouseY;
-
-    if (y > objectPaddle.y - tileH && y < objectPaddle.y + 2 * tileH) {
-        objectPaddle.x = x;
-    }
-    paddleCollide();
-}
-
-function pauseForTouch() {
-    let x, y;
-    for (let t = 0; t < touches.length; t++) {
-        x = touches[t].x;
-        y = touches[t].y;
-        if (!paused && rectIntersectRect(x, y, pixel, pixel, (width / 2) - (7 * pixel), (tileH / 2) - (pixel * 7), pixel * 14, pixel * 14)) {
-            pause();
-        } else if (paused === true && rectIntersectRect(x, y, pixel, pixel, 0, 0, width, height)) {
-            pause();
-        }
-    }
-}
-
-function mousePressed() {
-    movePaddleForMouse();
-    // Pause
-    if (!paused && rectIntersectRect(mouseX, mouseY, pixel, pixel, (width / 2) - (7 * pixel), (tileH / 2) - (pixel * 7), pixel * 14, pixel * 14)) {
-        pause();
-    } else if (paused === true && rectIntersectRect(mouseX, mouseY, pixel, pixel, 0, 0, width, height)) {
-        pause();
-    }
-}
-
-function mouseDragged() {
-    movePaddleForMouse();
-}
+let lastTouch = new Date().getMilliseconds() - 250;
 
 function pause() {
     paused = !paused;
@@ -556,4 +499,84 @@ function distanceTo(x1, y1, x2, y2) {
     let x = x2 - x1;
     let y = y2 - y1;
     return Math.sqrt((x * x) + (y * y));
+}
+
+/*
+    P5 Input Functions
+*/
+function keyTyped() {
+    if (key == ' ') {
+        // Pause on Space
+        pause();
+    }
+}
+
+function mousePressed() {
+    movePaddleForMouse();
+    // Toggle pause when touching the pause icon
+    if (!paused && rectIntersectRect(mouseX, mouseY, pixel, pixel, (width / 2) - (7 * pixel), (tileH / 2) - (pixel * 7), pixel * 14, pixel * 14)) {
+        pause();
+    } else if (paused === true && rectIntersectRect(mouseX, mouseY, pixel, pixel, 0, 0, width, height)) {
+        pause();
+    }
+}
+
+function mouseDragged() {
+    movePaddleForMouse();
+}
+
+let prevTouchTime = new Date().getMilliseconds();
+let dMillis = new Date().getMilliseconds();
+
+function touchStarted() {
+    dMillis = new Date().getMilliseconds();
+    if ((dMillis - prevTouchTime) % 18 == 0) {
+        movePaddleForTouch();
+        pauseForTouch();
+    }
+}
+
+function touchMoved() {
+    movePaddleForTouch();
+}
+
+
+/*
+    Other Input Functions
+*/
+function movePaddleForTouch() {
+    let x, y;
+    for (let t = 0; t < touches.length; t++) {
+        x = touches[t].x;
+        y = touches[t].y;
+
+        paddleX = x;
+        objectPaddle.x = x;
+
+    }
+    paddleCollide();
+    return false;
+}
+
+function movePaddleForMouse() {
+    let x = mouseX;
+    let y = mouseY;
+
+    if (y > objectPaddle.y - tileH && y < objectPaddle.y + 2 * tileH) {
+        objectPaddle.x = x;
+    }
+    paddleCollide();
+}
+
+function pauseForTouch() {
+    let x, y;
+    for (let t = 0; t < touches.length; t++) {
+        x = touches[t].x;
+        y = touches[t].y;
+        if (!paused && rectIntersectRect(x, y, pixel, pixel, (width / 2) - (7 * pixel), (tileH / 2) - (pixel * 7), pixel * 14, pixel * 14)) {
+            pause();
+        } else if (paused === true && rectIntersectRect(x, y, pixel, pixel, 0, 0, width, height)) {
+            pause();
+        }
+    }
 }

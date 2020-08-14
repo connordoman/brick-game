@@ -87,6 +87,13 @@ class Circle {
             dY = -dY;
         }
 
+        if (this.x == testR.x + testR.w / 2) {
+            dX = -dX;
+        }
+        if (this.y == testR.y + testR.h / 2) {
+            dY = -dY;
+        }
+
         let distX = this.x - testX;
         let distY = this.y - testY;
         let distance = Math.sqrt((distX * distX) + (distY * distY));
@@ -275,9 +282,9 @@ Functions
 
 */
 let colorAt = (x, y, w, h) => {
-    let blue = 255 - ((y / h) * 230) * (1.0 + Math.sin(2 * Math.PI * (x / w)));
-    let green = 255 - ((y / h) * 230) * (1.0 + Math.cos(2 * Math.PI * (x / w)));
-    let red = 255 - ((y / h) * 230) * (1.0 - Math.sin(2 * Math.PI * (x / w)));
+    let blue = 255 - (((y + 1) / h) * 255) * (1.0 + Math.sin(2 * Math.PI * (x / w)));
+    let green = 255 - (((y + 1) / h) * 255) * (1.0 + Math.cos(2 * Math.PI * (x / w)));
+    let red = 255 - (((y + 1) / h) * 255) * (1.0 - Math.sin(2 * Math.PI * (x / w)));
 
     return color(red, green, blue);
 };
