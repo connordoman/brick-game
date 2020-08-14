@@ -9,7 +9,7 @@ const DIM_X = 9;
 const DIM_Y = 16;
 const RATIO = DIM_X / DIM_Y;
 
-const BRICK_ROWS = 6;
+let brickRows = 2;
 
 const DEBUG = false;
 
@@ -39,6 +39,7 @@ let brickGroup;
 
 let bufferX;
 
+let level;
 let score;
 let lives;
 let paused;
@@ -103,10 +104,12 @@ function setup() {
 
     // Set up bricks
     brickness = pixel * 6;
-    brickGroup = new BrickGroup(tileW / 2, tileH + brickness / 2, DIM_X, BRICK_ROWS, new Point(tileW, brickness));
+    brickGroup = new BrickGroup(tileW / 2, tileH + brickness / 2, DIM_X, brickRows, new Point(tileW, brickness));
+    brickGroup.numDisabled = brickGroup.bricks.length - 1;
 
     // Misc
     bufferX = tileW / 6;
+    level = 1;
     score = 0;
     lives = 3;
     paused = false;
@@ -144,7 +147,7 @@ function draw() {
     objectBall.update();
 
     // Check brick collisions
-    let range = new Rectangle(objectBall.x, objectBall.y, tileW * (2), tileH * (2));
+    let range = new Rectangle(objectBall.x, objectBall.y, tileW * (3 / 2), tileH * (3 / 2));
     let points = qt.query(range);
     if (DEBUG) {
         noFill();
@@ -179,24 +182,23 @@ function draw() {
                 if (objectBall.collides(br)) {
                     brickGroup.disableBrick(br.xIndex, br.yIndex);
                     score += calculateScore(br.yIndex);
-                }
+                    if (brickGroup.isEmpty()) {
+                        level++;
+                        brickRows = level * 2;
 
-                /*if (ballX + ballVx + (ballW / 2) >= x - tileW / 2 && ballX + ballVx - (ballW / 2) < x + tileW / 2) {
-                    if (ballY + ballVy + (ballH / 2) >= y - brickness / 2 && ballY + ballVy - (ballH / 2) < y + brickness / 2) {
-                        ballVy = -1 * ballVy;
-                        brickGroup.disableBrick(xIndex, yIndex);
-                        score += calculateScore(yIndex);
-                        //console.log(`Collision: ${br.pxPoint}`);
+                        brickGroup = new BrickGroup(brickGroup.x, brickGroup.y, brickGroup.w, brickRows, brickGroup.brickDim);
+                        objectBall.x = width / 2;
+                        objectBall.y = height / 2;
+                        objectBall.vX = 0;
+                        objectPaddle.x = width / 2;
+                        pause();
                     }
-                }*/
+                }
             }
         }
     }
 
     // Check collisions
-    //paddleCollide();
-    ///ballCollideWithWalls();
-    //ballCollideWithPaddle();
     objectBall.collidesWithPaddle(objectPaddle);
 
     // Draw top line
@@ -212,14 +214,14 @@ function draw() {
     // Draw bricks
     stroke(255);
     strokeWeight(pixel / 2);
-    //drawBrickArray(0, 0, bricks);
     brickGroup.draw();
 
     // Draw score
     noStroke();
     fill(255);
     textSize(pixel * 6);
-    text("Score: " + score, pixel * 4, pixel * 10);
+    text(`Score: ${score}`, pixel * 4, pixel * 10);
+    text(`Lv: ${level}`, width / 2 + tileW * 4 / 5, pixel * 10);
     //let ang = frameRate().toFixed(2);
     //text(ang, width / 2 - tileW / 2 - textWidth(ang) / 2, tileH / 6, textWidth(ang), tileH);
 
@@ -265,7 +267,7 @@ function drawIndicators() {
     // Paddle Indicator
     strokeWeight(4);
     stroke(color(0, 255, 0));
-    point(paddleX, paddleY);
+    point(objectPaddle.x, objectPaddle.y);
 
     // Ball indicator
     stroke(color(0, 255, 255));
@@ -275,8 +277,6 @@ function drawIndicators() {
     strokeWeight(pixel);
     stroke(255);
     line(0, tileH, width, tileH);
-    //line(bufferX, 0, bufferX, height);
-    //line(width - bufferX, 0, width - bufferX, height);
 
 
     // Ball vector
@@ -288,7 +288,7 @@ function drawIndicators() {
         vec = calculateBallVector(objectBall.x, objectBall.y, objectBall.vX, objectBall.vY, objectBall.size);
         line(objectBall.x, objectBall.y, vec[0], vec[1]);
     } else {
-        strokeWeight(4 * pixel);
+        strokeWeight(2 * pixel);
         vec = calculateBallVector(objectBall.x, objectBall.y, objectBall.vX, objectBall.vY, objectBall.r);
         point(vec[0], vec[1]);
     }
@@ -298,7 +298,7 @@ function drawIndicators() {
     printDebugLine("v: (" + objectBall.vX.toFixed(1) + ", " + objectBall.vY.toFixed(1) + ")");
     printDebugLine("pt: (" + vec[0].toFixed(1) + ", " + vec[1].toFixed(1) + ")");
     printDebugLine("theta: " + vec[2].toFixed(3));
-    text(debugText, tileW / 5, BRICK_ROWS * brickness + tileH + textSize());
+    text(debugText, tileW / 5, brickRows * brickness + tileH + textSize());
 
     // Quadtree
     quadTreeMask(qt);
@@ -332,18 +332,24 @@ function printDebugLine(line) {
 }
 
 function drawGameOver() {
-    fill(color(200, 128));
-    rect(width / 2, width / 2, width, height);
+    fill(color(255, 128));
+    rect(width / 2, height / 2, width, height);
+    drawMessage(width / 2, height / 2, "Game Over", color(255, 64, 64));
+}
+
+function drawMessage(x, y, msg, textColor) {
+    if (!textColor) {
+        textColor = 255;
+    }
     textSize(tileW);
 
-    let over = "Game Over";
-    let textX = width / 2;
-    let textY = height / 2;
+    let textX = x;
+    let textY = y;
     fill(0);
-    rect(textX, textY, textWidth(over) + tileW, tileH * 2);
+    rect(textX, textY, textWidth(msg) + tileW, tileH * 2);
 
-    fill(color(255, 64, 64));
-    text(over, textX - textWidth(over) / 2, textY + tileH / 3);
+    fill(textColor);
+    text(msg, textX - textWidth(msg) / 2, textY + tileH / 3);
 }
 
 function drawBrick(x, y) {
@@ -421,6 +427,7 @@ function drawPaused() {
     rect(width / 2, height / 2, width, height);
 
     drawPauseSquare(width / 2, height / 2, tileW * 3);
+    drawMessage(width / 2, height / 4, `Level ${level}`);
 }
 
 function drawPauseSquare(x, y, w) {
@@ -508,14 +515,11 @@ function calculateIndex(x, y, w) {
 }
 
 function calculateScore(y) {
-    y = BRICK_ROWS - y;
-    return Math.ceil((y * y) / BRICK_ROWS) + 1;
+    y = brickRows - y;
+    return Math.ceil((y * y) / brickRows) + 1;
 }
 
 function quadTreeMask(qt) {
-    //noStroke();
-    //fill(200, 128);
-    //rect(width / 2, height / 2, width, height);
 
     quadTreeFraction(qt);
 }

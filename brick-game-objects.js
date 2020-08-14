@@ -175,9 +175,11 @@ class BrickGroup {
     constructor(x, y, width, height, brickDim) {
         this.x = x;
         this.y = y;
+        this.brickDim = brickDim;
         this.w = width;
         this.h = height;
         this.bricks = [];
+        this.numDisabled = 0;
 
         let b;
         for (let j = 0; j < height; j++) {
@@ -224,7 +226,12 @@ class BrickGroup {
         if (this.getBrick(x, y)) {
             //console.log("Disabling brick...");
             this.bricks[(this.w * y) + x] = false;
+            this.numDisabled++;
         }
+    }
+
+    isEmpty() {
+        return this.bricks.length - this.numDisabled == 0;
     }
 }
 
@@ -249,13 +256,12 @@ class Ball extends Circle {
             this.vX = -1 * Math.abs(this.vX);
         }
 
-        if (this.y <= tileH * 2) {
+        if (this.y <= tileH + this.r) {
             this.vY = Math.abs(this.vY);
-        } else if (this.y >= height + this.r - (tileH / 3)) {
-            this.vX = 0;
-            this.vY = -1 * Math.abs(this.vY);
-
+        } else if (this.y >= height - this.r - (tileH / 3)) {
             // Reset ball position
+            this.vX = 0;
+            this.vY = Math.abs(this.vY);
             this.x = width / 2;
             this.y = height * (2 / 3);
             lives--;
@@ -269,9 +275,9 @@ Functions
 
 */
 let colorAt = (x, y, w, h) => {
-    let blue = 255 - ((y / h) * 255) * (1.0 + Math.sin(2 * Math.PI * (x / w)));
-    let green = 255 - ((y / h) * 255) * (1.0 + Math.cos(2 * Math.PI * (x / w)));
-    let red = 255 - ((y / h) * 255) * (1.0 - Math.sin(2 * Math.PI * (x / w)));
+    let blue = 255 - ((y / h) * 230) * (1.0 + Math.sin(2 * Math.PI * (x / w)));
+    let green = 255 - ((y / h) * 230) * (1.0 + Math.cos(2 * Math.PI * (x / w)));
+    let red = 255 - ((y / h) * 230) * (1.0 - Math.sin(2 * Math.PI * (x / w)));
 
     return color(red, green, blue);
 };
